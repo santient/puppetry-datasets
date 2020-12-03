@@ -1,4 +1,5 @@
 import os
+import re
 import pytube
 
 
@@ -6,7 +7,6 @@ def download_videos(args):
     """
     Downloads the list of YouTube videos and accompanying English subtitles from
     provided URLs
-    :param args: List of YouTube video URLs
     """
     for url in args.url_file:
         try:
@@ -19,12 +19,18 @@ def download_videos(args):
         video_path = os.path.join(save_dir, video_id)
         video.download(video_path, filename='video')
 
-        # TODO: Configure caption parametrization
-        caption_lang = args.capt_lang
-        try:
-            caption = source.captions[caption_lang]
-        except KeyError:
-            raise ValueError(f'''No valid caption for video '{url}'.''')
+        all_captions = [x.code for x in source.captions]
+        if 'en' in all_captions:
+            caption_lang = 'en'
+        else:
+            regex = re.compile('en-*')
+            captions = list(filter(regex.match, all_captions))
+            if captions:
+                caption_lang = captions[0]  # arbitrarily picking the first
+            else:
+                raise ValueError(f'''No valid caption for video '{url}'.''')
+
+        caption = source.captions[caption_lang]
         caption_srt = caption.generate_srt_captions()
         caption_path = os.path.join(save_dir, video_id, 'captions.txt')
         with open(caption_path, 'w') as file:
