@@ -20,10 +20,11 @@ def download_videos(args):
         video.download(video_path, filename='video')
 
         all_captions = [x.code for x in source.captions]
-        if 'en' in all_captions:
-            caption_lang = 'en'
+        lang = args.lang  # language of the caption as a code (e.g. en)
+        if lang in all_captions:
+            caption_lang = lang
         else:
-            regex = re.compile('en-*')
+            regex = re.compile(f'{lang}-.*')
             captions = list(filter(regex.match, all_captions))
             if captions:
                 caption_lang = captions[0]  # arbitrarily picking the first
