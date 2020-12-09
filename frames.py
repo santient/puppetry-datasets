@@ -16,7 +16,7 @@ def extract_frames(args):
         
         # frame rate same as video
         cmds = ['ffmpeg','-i',f'{video_path}', f'{root_path}frame%d.jpg']
-        ffmpeg = subprocess.run(cmds, stdout=subprocess.PIPE, text=True)
+        ffmpeg = subprocess.run(cmds)
 
         # raises CalledProcessError if exit code not 0
         ffmpeg.check_returncode()
