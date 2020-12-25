@@ -1,6 +1,7 @@
 import os
 import re
 import pytube
+import subprocess
 
 
 def download_videos(args):
@@ -33,9 +34,16 @@ def download_videos(args):
 
         caption = source.captions[caption_lang]
         caption_srt = caption.generate_srt_captions()
-        caption_path = os.path.join(save_dir, video_id, 'captions.txt')
+        caption_path = os.path.join(save_dir, video_id, 'captions.srt')
         with open(caption_path, 'w') as file:
             file.write(caption_srt)
+
+        txtgrid_path = os.path.join(save_dir, video_id, 'captions.TextGrid')
+        cmd = f'python3 -m textgrid_convert -i {caption_path} -o {txtgrid_path}'
+        subprocess.run(cmd.split())
+
+
+
 
 
 
