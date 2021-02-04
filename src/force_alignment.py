@@ -1,5 +1,3 @@
-import module_manager
-module_manager.review()
 import sys
 from p2fa import align
 
