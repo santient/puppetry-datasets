@@ -20,7 +20,7 @@ def extract_waveforms(args):
     save_dir = args.out_dir
     for vid_id in get_immediate_subdirectories(save_dir):
         video_path = os.path.join(save_dir, vid_id, 'video.mp4')
-        audio_path = os.path.join(save_dir, vid_id, 'audio.mp4')
+        audio_path = os.path.join(save_dir, vid_id, 'audio.wav')
         subprocess.call(['ffmpeg', '-y', '-i', video_path, audio_path])
 
 
@@ -32,7 +32,7 @@ def extract_spectrograms(args):
     save_dir = args.out_dir
     spec_dic = {}
     for vid_id in get_immediate_subdirectories(save_dir):
-        audio_path = os.path.join(save_dir, vid_id, 'audio.mp4')
+        audio_path = os.path.join(save_dir, vid_id, 'audio.wav')
         y, sr = librosa.load(audio_path, sr=None)
         n_fft = args.spec.n_fft
         n_mels = args.spec.n_mels
@@ -44,7 +44,7 @@ def extract_spectrograms(args):
                                                    n_mels=n_mels)
         mel_spect = librosa.power_to_db(mel_spect, ref=np.max)
         spec_dic[vid_id] = {'ft': fft, 'mel_spect': mel_spect}
-    return spec_dic
+    np.save('spec.npy', spec_dic)
 
 
 # TODO add methods
