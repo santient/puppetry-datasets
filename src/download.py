@@ -1,6 +1,7 @@
 import os
 import re
 import pytube
+import subprocess
 
 
 def download_videos(args):
@@ -17,8 +18,16 @@ def download_videos(args):
         video_id = pytube.extract.video_id(url)
         save_dir = args.out_dir
         video_path = os.path.join(save_dir, video_id)
-        video.download(video_path, filename='video')
+        video.download(video_path, filename='video_original')
 
+        # Rescale the video and fix frame rate
+        old_vid = os.path.join(save_dir, video_id, 'video_original.mp4')
+        new_vid = os.path.join(save_dir, video_id, 'video.mp4')
+        res = f'scale={args.res}'
+        subprocess.call(['ffmpeg', '-y', '-i', old_vid, '-vf', res, '-r',
+                         args.frame_rate, new_vid])
+
+        # Fetch and download captions
         all_captions = [x.code for x in source.captions]
         lang = args.lang  # language of the caption as a code (e.g. en)
         if lang in all_captions:
