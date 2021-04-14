@@ -11,7 +11,7 @@ def read_spectrograms(args, video_id, start, end):
     t = start
 
     # hop length is default n_fft/4, so only a quarter of window is unique
-    spectro_unique_samples = args.spec.n_fft / 4
+    spectro_unique_samples = args.n_fft / 4
     spectro_column_time = spectro_unique_samples / args.sampling_rate
 
     spectrogram = np.load(os.path.join(save_dir, video_id, "spectrogram.npy"))
@@ -31,8 +31,7 @@ def spectrograms_to_compseq(args):
     for video in get_immediate_subdirectories(save_dir):
         phone_intervals = list(h5py.File(os.path.join(save_dir, video,
                                                       "AlignFilter/{}_phones.hdf5".format(
-                                                          video)))[video][
-                                   "intervals"])
+                                                          video)))[video]["intervals"])
         start = phone_intervals[0][0]
         end = phone_intervals[-1][1]
         spectrogram_intervals, spectrogram_features = read_spectrograms(video,
@@ -42,13 +41,12 @@ def spectrograms_to_compseq(args):
         spectrogram_data[video]["intervals"] = spectrogram_intervals
         spectrogram_data[video]["features"] = spectrogram_features
     spectrograms = mmdatasdk.computational_sequence(
-        "{}_spectrograms")
+        "spectrograms")
     spectrograms.setData(spectrogram_data, save_dir)
     spectrograms.deploy(
-        os.path.join(args.out_dir, "{}_spectrograms.csd"))
+        os.path.join(args.out_dir, "spectrograms.csd"))
 
 
-# TODO add methods
 def make_computational_sequences(args):
     frames_to_compseq(args)
     masked_frames_to_compseq(args)
@@ -57,5 +55,5 @@ def make_computational_sequences(args):
     words_to_compseq(args)
     phones_to_compseq(args)
     openface_to_compseq(args)
-    align_computational_sequences(args)
-    compress_computational_sequences(args)
+    # align_computational_sequences(args)
+    # compress_computational_sequences(args)

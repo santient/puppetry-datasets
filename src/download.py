@@ -9,7 +9,10 @@ def download_videos(args):
     Downloads the list of YouTube videos and accompanying English subtitles from
     provided URLs
     """
-    for url in args.url_file:
+    with open(args.url_file, "r") as f:
+        urls = f.readlines()
+    for url in urls:
+        url = "https://youtu.be/{}".format(url)
         try:
             source = pytube.YouTube(url)
         except:
@@ -25,7 +28,7 @@ def download_videos(args):
         new_vid = os.path.join(save_dir, video_id, 'video.mp4')
         res = f'scale={args.res}'
         subprocess.call(['ffmpeg', '-y', '-i', old_vid, '-vf', res, '-r',
-                         args.frame_rate, new_vid])
+                         str(args.frame_rate), new_vid])
 
         # Fetch and download captions
         all_captions = [x.code for x in source.captions]
