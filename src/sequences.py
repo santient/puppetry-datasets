@@ -31,7 +31,8 @@ def spectrograms_to_compseq(args):
     for video in get_immediate_subdirectories(save_dir):
         phone_intervals = list(h5py.File(os.path.join(save_dir, video,
                                                       "AlignFilter/{}_phones.hdf5".format(
-                                                          video)))[video]["intervals"])
+                                                          video)))[video][
+                                                      "intervals"])
         start = phone_intervals[0][0]
         end = phone_intervals[-1][1]
         spectrogram_intervals, spectrogram_features = read_spectrograms(video,
@@ -40,11 +41,55 @@ def spectrograms_to_compseq(args):
         spectrogram_data[video] = {}
         spectrogram_data[video]["intervals"] = spectrogram_intervals
         spectrogram_data[video]["features"] = spectrogram_features
-    spectrograms = mmdatasdk.computational_sequence(
-        "spectrograms")
+    spectrograms = mmdatasdk.computational_sequence("spectrograms")
     spectrograms.setData(spectrogram_data, save_dir)
-    spectrograms.deploy(
-        os.path.join(args.out_dir, "spectrograms.csd"))
+    spectrograms.deploy(os.path.join(save_dir, "spectrograms.csd"))
+
+
+def read_words(args, video):
+    save_dir = args.out_dir
+    data = h5py.File(os.path.join(save_dir, video,
+                                  "AlignFilter/{}_words.hdf5".format(video)))[
+        video]
+    intervals = list(data["intervals"])
+    features = list(data["features"])
+    return np.array(intervals), np.array(features)
+
+
+def words_to_compseq(args):
+    word_data = {}
+    save_dir = args.out_dir
+    for video in get_immediate_subdirectories(save_dir):
+        word_intervals, word_features = read_words(args, video)
+        word_data[video] = {}
+        word_data[video]["intervals"] = word_intervals
+        word_data[video]["features"] = word_features
+    words = mmdatasdk.computational_sequence("words")
+    words.setData(word_data, save_dir)
+    words.deploy(os.path.join(save_dir, "words.csd"))
+
+
+def read_phones(args, video):
+    save_dir = args.out_dir
+    data = h5py.File(os.path.join(save_dir, video,
+                                  "AlignFilter/{}_phones.hdf5".format(video)))[
+        video]
+    intervals = list(data["intervals"])
+    features = list(data["features"])
+    return np.array(intervals), np.array(features)
+
+
+def phones_to_compseq(args):
+    phone_data = {}
+    save_dir = args.out_dir
+    for video in get_immediate_subdirectories(save_dir):
+        phone_intervals, phone_features = read_phones(args, video)
+        phone_data[video] = {}
+        phone_data[video]["intervals"] = phone_intervals
+        phone_data[video]["features"] = phone_features
+    phones = mmdatasdk.computational_sequence("phones")
+    phones.setData(phone_data, save_dir)
+    phones.deploy(os.path.join(save_dir, "phones.csd"))
 
 
 def make_computational_sequences(args):

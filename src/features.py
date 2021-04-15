@@ -8,7 +8,7 @@ from src.utils import *
 
 
 def extract_frames(args):
-    dirs = utils.get_immediate_subdirectories(args.out_dir)
+    dirs = get_immediate_subdirectories(args.out_dir)
     for d in dirs:
         # video path is created in download.py
         root_path = os.path.join(args.out_dir, d)
@@ -21,6 +21,7 @@ def extract_frames(args):
         # raises CalledProcessError if exit code not 0
         ffmpeg.check_returncode()
 
+
 def extract_waveforms(args):
     """
     Extract waveforms in a wav file for every video file.
@@ -31,6 +32,7 @@ def extract_waveforms(args):
         video_path = os.path.join(save_dir, vid_id, 'video.mp4')
         audio_path = os.path.join(save_dir, vid_id, 'audio.wav')
         subprocess.call(['ffmpeg', '-y', '-i', video_path, '-ar', sr, audio_path])
+
 
 def extract_spectrograms(args):
     """
@@ -54,6 +56,7 @@ def extract_spectrograms(args):
         spec_dic['mel_spect'] = mel_spect
         np.save(os.path.join(save_dir, vid_id, 'spectrogram.npy'), spec_dic)
 
+
 def force_align(args):
     save_dir = args.out_dir
     for vid_id in get_immediate_subdirectories(save_dir):
@@ -62,6 +65,7 @@ def force_align(args):
         outFile = os.path.join(save_dir, vid_id, 'aligned.TextGrid')
         remove_timestamps_captions(trsFile)
         align.align(wavFile, trsFile, outfile=outFile)
+
 
 def remove_timestamps_captions(filePath):
     with open(filePath, 'r+') as file:
@@ -73,15 +77,18 @@ def remove_timestamps_captions(filePath):
         deleteFileContent(file) # TODO see if unnecessary
         file.writelines(newData)
 
+
 def deleteFileContent(file):
     file.seek(0)
     file.truncate()
+
 
 def run_openface(args):
     save_dir = args.out_dir
     for vid_id in get_immediate_subdirectories(save_dir):
         videoPath = os.path.join(save_dir, vid_id, 'video.mp4')
         run_command(f"FeatureExtraction -f '{videoPath}'")
+
 
 def extract_features(args):
     extract_frames(args)
