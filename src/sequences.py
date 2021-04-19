@@ -24,6 +24,51 @@ def read_spectrograms(args, video_id, start, end):
             t = timestamp
     return np.array(intervals), np.array(features)
 
+def read_masked_frames(video, start, end):
+    openface_df = pandas.read_csv(os.path.join(root, video, "processed/{}.csv".format(video)), sep=", ")
+    intervals = []
+    features = []
+    t = start
+    for file in sorted(glob.glob(os.path.join(root, video, "processed/{}_aligned/*.bmp".format(video)))):
+        frame = int(file[-10:-4])
+        timestamp = float(openface_df.loc[openface_df["frame"] == frame].iloc[0]["timestamp"])
+        confidence = float(openface_df.loc[openface_df["frame"] == frame].iloc[0]["confidence"])
+        if timestamp >= start and timestamp <= end and confidence >= 0.9:
+            img = skimage.io.imread(file)
+            intervals.append([t, timestamp])
+            features.append(img.flatten())
+        t = timestamp
+    return numpy.array(intervals), numpy.array(features)
+
+def read_openface(video, start, end):
+    openface_df = pandas.read_csv(os.path.join(root, video, "processed/{}.csv".format(video)), sep=", ")
+    intervals = []
+    features = []
+    t = start
+    for i, row in openface_df.iterrows():
+        timestamp = float(row["timestamp"])
+        confidence = float(openface_df.loc[openface_df["frame"] == frame].iloc[0]["confidence"])
+        if timestamp >= start and timestamp <= end and confidence >= 0.9:
+            intervals.append([t, timestamp])
+            features.append(row.values[5:])
+            t = timestamp
+    return numpy.array(intervals), numpy.array(features)
+
+def read_raw_frames(video, start, end):
+    df = pandas.read_csv(os.path.join(root, video, "frames/{}.csv".format(video)), sep=", ")
+    intervals = []
+    features = []
+    t = start
+    for file in sorted(glob.glob(os.path.join(root, video, "frames/{}_aligned/*.bmp".format(video)))):
+        frame = int(file[-10:-4])
+        timestamp = float(df.loc[df["frame"] == frame].iloc[0]["timestamp"])
+        confidence = float(df.loc[df["frame"] == frame].iloc[0]["confidence"])
+        if timestamp >= start and timestamp <= end and confidence >= 0.9:
+            img = skimage.io.imread(file)
+            intervals.append([t, timestamp])
+            features.append(img.flatten())
+        t = timestamp
+    return numpy.array(intervals), numpy.array(features)
 
 def spectrograms_to_compseq(args):
     spectrogram_data = {}
