@@ -1,5 +1,6 @@
 import numpy as np
 import h5py
+import librosa
 from mmsdk import mmdatasdk
 from src.utils import *
 
@@ -24,15 +25,22 @@ def read_spectrograms(args, video_id, start, end):
             t = timestamp
     return np.array(intervals), np.array(features)
 
+
 def read_masked_frames(video, start, end):
-    openface_df = pandas.read_csv(os.path.join(root, video, "processed/{}.csv".format(video)), sep=", ")
+    openface_df = pandas.read_csv(
+        os.path.join(root, video, "processed/{}.csv".format(video)), sep=", ")
     intervals = []
     features = []
     t = start
-    for file in sorted(glob.glob(os.path.join(root, video, "processed/{}_aligned/*.bmp".format(video)))):
+    for file in sorted(glob.glob(os.path.join(root, video,
+                                              "processed/{}_aligned/*.bmp".format(
+                                                  video)))):
         frame = int(file[-10:-4])
-        timestamp = float(openface_df.loc[openface_df["frame"] == frame].iloc[0]["timestamp"])
-        confidence = float(openface_df.loc[openface_df["frame"] == frame].iloc[0]["confidence"])
+        timestamp = float(
+            openface_df.loc[openface_df["frame"] == frame].iloc[0]["timestamp"])
+        confidence = float(
+            openface_df.loc[openface_df["frame"] == frame].iloc[0][
+                "confidence"])
         if timestamp >= start and timestamp <= end and confidence >= 0.9:
             img = skimage.io.imread(file)
             intervals.append([t, timestamp])
@@ -40,26 +48,34 @@ def read_masked_frames(video, start, end):
         t = timestamp
     return numpy.array(intervals), numpy.array(features)
 
+
 def read_openface(video, start, end):
-    openface_df = pandas.read_csv(os.path.join(root, video, "processed/{}.csv".format(video)), sep=", ")
+    openface_df = pandas.read_csv(
+        os.path.join(root, video, "processed/{}.csv".format(video)), sep=", ")
     intervals = []
     features = []
     t = start
     for i, row in openface_df.iterrows():
         timestamp = float(row["timestamp"])
-        confidence = float(openface_df.loc[openface_df["frame"] == frame].iloc[0]["confidence"])
+        confidence = float(
+            openface_df.loc[openface_df["frame"] == frame].iloc[0][
+                "confidence"])
         if timestamp >= start and timestamp <= end and confidence >= 0.9:
             intervals.append([t, timestamp])
             features.append(row.values[5:])
             t = timestamp
     return numpy.array(intervals), numpy.array(features)
 
+
 def read_raw_frames(video, start, end):
-    df = pandas.read_csv(os.path.join(root, video, "frames/{}.csv".format(video)), sep=", ")
+    df = pandas.read_csv(
+        os.path.join(root, video, "frames/{}.csv".format(video)), sep=", ")
     intervals = []
     features = []
     t = start
-    for file in sorted(glob.glob(os.path.join(root, video, "frames/{}_aligned/*.bmp".format(video)))):
+    for file in sorted(glob.glob(os.path.join(root, video,
+                                              "frames/{}_aligned/*.bmp".format(
+                                                  video)))):
         frame = int(file[-10:-4])
         timestamp = float(df.loc[df["frame"] == frame].iloc[0]["timestamp"])
         confidence = float(df.loc[df["frame"] == frame].iloc[0]["confidence"])
@@ -70,6 +86,7 @@ def read_raw_frames(video, start, end):
         t = timestamp
     return numpy.array(intervals), numpy.array(features)
 
+
 def spectrograms_to_compseq(args):
     spectrogram_data = {}
     save_dir = args.out_dir
@@ -77,10 +94,11 @@ def spectrograms_to_compseq(args):
         phone_intervals = list(h5py.File(os.path.join(save_dir, video,
                                                       "AlignFilter/{}_phones.hdf5".format(
                                                           video)))[video][
-                                                      "intervals"])
+                                   "intervals"])
         start = phone_intervals[0][0]
         end = phone_intervals[-1][1]
-        spectrogram_intervals, spectrogram_features = read_spectrograms(video,
+        spectrogram_intervals, spectrogram_features = read_spectrograms(args,
+                                                                        video,
                                                                         start,
                                                                         end)
         spectrogram_data[video] = {}
@@ -89,6 +107,48 @@ def spectrograms_to_compseq(args):
     spectrograms = mmdatasdk.computational_sequence("spectrograms")
     spectrograms.setData(spectrogram_data, save_dir)
     spectrograms.deploy(os.path.join(save_dir, "spectrograms.csd"))
+
+
+def read_waveforms(args, video_id, start, end):
+    save_dir = args.out_dir
+    intervals = []
+    features = []
+    t = start
+
+    audio_path = os.path.join(save_dir, video_id, 'audio.wav')
+    y, sr = librosa.load(audio_path, sr=None)
+
+    # sampling time is inverse of sampling rate
+    sampling_time = 1 / sr
+
+    for i, wave in enumerate(y):
+        timestamp = i * sampling_time
+        if start <= timestamp <= end:
+            intervals.append([t, timestamp])
+            features.append(wave)
+            t = timestamp
+    return np.array(intervals), np.array(features)
+
+
+def waveforms_to_compseq(args):
+    waveform_data = {}
+    save_dir = args.out_dir
+    for video in get_immediate_subdirectories(save_dir):
+        phone_intervals = list(h5py.File(os.path.join(save_dir, video,
+                                                      "AlignFilter/{}_phones.hdf5".format(
+                                                          video)))[video][
+                                   "intervals"])
+        start = phone_intervals[0][0]
+        end = phone_intervals[-1][1]
+        waveform_intervals, waveform_features = read_waveforms(args, video,
+                                                               start,
+                                                               end)
+        waveform_data[video] = {}
+        waveform_data[video]["intervals"] = waveform_intervals
+        waveform_data[video]["features"] = waveform_features
+    waveforms = mmdatasdk.computational_sequence("waveforms")
+    waveforms.setData(waveform_data, save_dir)
+    waveforms.deploy(os.path.join(save_dir, "waveforms.csd"))
 
 
 def read_words(args, video):
