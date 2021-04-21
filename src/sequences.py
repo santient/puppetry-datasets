@@ -54,6 +54,21 @@ def read_openface(video, start, end):
             t = timestamp
     return numpy.array(intervals), numpy.array(features)
 
+def openface_to_compseq(args):
+    openface_data = {}
+    save_dir = args.out_dir
+    for video in get_immediate_subdirectories(save_dir):
+        phone_intervals = list(h5py.File(os.path.join(save_dir, video, "AlignFilter/{}_phones.hdf5".format(video)))[video]["intervals"])
+        start = phone_intervals[0][0]
+        end = phone_intervals[-1][1]
+        openface_intervals, openface_features = read_openface(video, start, end)
+        openface_data[video] = {}
+        openface_data[video]["intervals"] = openface_intervals
+        openface_data[video]["features"] = openface_features
+    openface = mmdatasdk.computational_sequence("openface")
+    openface.setData(openface_data, save_dir)
+    openface.deploy(os.path.join(save_dir, "openface.csd"))
+
 def read_raw_frames(video, start, end):
     df = pandas.read_csv(os.path.join(root, video, "frames/{}.csv".format(video)), sep=", ")
     intervals = []
@@ -135,7 +150,6 @@ def phones_to_compseq(args):
     phones = mmdatasdk.computational_sequence("phones")
     phones.setData(phone_data, save_dir)
     phones.deploy(os.path.join(save_dir, "phones.csd"))
-
 
 def make_computational_sequences(args):
     frames_to_compseq(args)
