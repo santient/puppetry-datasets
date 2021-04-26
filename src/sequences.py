@@ -3,7 +3,16 @@ import h5py
 import librosa
 from mmsdk import mmdatasdk
 from src.utils import *
-
+import os
+import glob
+from mmsdk import mmdatasdk
+import pandas
+import tqdm
+import skimage.io
+import matplotlib.pyplot as plt
+from scipy import signal
+from scipy.io import wavfile
+import librosa
 
 def read_spectrograms(args, video_id, start, end):
     save_dir = args.out_dir
@@ -25,16 +34,12 @@ def read_spectrograms(args, video_id, start, end):
             t = timestamp
     return np.array(intervals), np.array(features)
 
-
-def read_masked_frames(video, start, end):
-    openface_df = pandas.read_csv(
-        os.path.join(root, video, "processed/{}.csv".format(video)), sep=", ")
+def read_masked_frames(args, video, start, end):
+    openface_df = pandas.read_csv(os.path.join(args.out_dir, video, "processed/{}.csv".format(video)), sep=", ")
     intervals = []
     features = []
     t = start
-    for file in sorted(glob.glob(os.path.join(root, video,
-                                              "processed/{}_aligned/*.bmp".format(
-                                                  video)))):
+    for file in sorted(glob.glob(os.path.join(args.out_dir, video, "processed/{}_aligned/*.bmp".format(video)))):
         frame = int(file[-10:-4])
         timestamp = float(
             openface_df.loc[openface_df["frame"] == frame].iloc[0]["timestamp"])
@@ -48,34 +53,41 @@ def read_masked_frames(video, start, end):
         t = timestamp
     return numpy.array(intervals), numpy.array(features)
 
-
-def read_openface(video, start, end):
-    openface_df = pandas.read_csv(
-        os.path.join(root, video, "processed/{}.csv".format(video)), sep=", ")
+def read_openface(args, video, start, end):
+    openface_df = pandas.read_csv(os.path.join(args.out_dir, video, "processed/{}.csv".format(video)), sep=", ")
     intervals = []
     features = []
     t = start
     for i, row in openface_df.iterrows():
         timestamp = float(row["timestamp"])
-        confidence = float(
-            openface_df.loc[openface_df["frame"] == frame].iloc[0][
-                "confidence"])
+        confidence = float(row['confidence'])
         if timestamp >= start and timestamp <= end and confidence >= 0.9:
             intervals.append([t, timestamp])
             features.append(row.values[5:])
             t = timestamp
     return numpy.array(intervals), numpy.array(features)
 
+def openface_to_compseq(args):
+    openface_data = {}
+    save_dir = args.out_dir
+    for video in get_immediate_subdirectories(save_dir):
+        phone_intervals = list(h5py.File(os.path.join(save_dir, video, "AlignFilter/{}_phones.hdf5".format(video)))[video]["intervals"])
+        start = phone_intervals[0][0]
+        end = phone_intervals[-1][1]
+        openface_intervals, openface_features = read_openface(video, start, end)
+        openface_data[video] = {}
+        openface_data[video]["intervals"] = openface_intervals
+        openface_data[video]["features"] = openface_features
+    openface = mmdatasdk.computational_sequence("openface")
+    openface.setData(openface_data, save_dir)
+    openface.deploy(os.path.join(save_dir, "openface.csd"))
 
-def read_raw_frames(video, start, end):
-    df = pandas.read_csv(
-        os.path.join(root, video, "frames/{}.csv".format(video)), sep=", ")
+def read_raw_frames(args, video, start, end):
+    df = pandas.read_csv(os.path.join(args.out_dir, video, "frames/{}.csv".format(video)), sep=", ")
     intervals = []
     features = []
     t = start
-    for file in sorted(glob.glob(os.path.join(root, video,
-                                              "frames/{}_aligned/*.bmp".format(
-                                                  video)))):
+    for file in sorted(glob.glob(os.path.join(args.out_dir, video, "frames/{}_aligned/*.bmp".format(video)))):
         frame = int(file[-10:-4])
         timestamp = float(df.loc[df["frame"] == frame].iloc[0]["timestamp"])
         confidence = float(df.loc[df["frame"] == frame].iloc[0]["confidence"])
@@ -195,7 +207,6 @@ def phones_to_compseq(args):
     phones = mmdatasdk.computational_sequence("phones")
     phones.setData(phone_data, save_dir)
     phones.deploy(os.path.join(save_dir, "phones.csd"))
-
 
 def make_computational_sequences(args):
     frames_to_compseq(args)
